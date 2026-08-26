@@ -52,6 +52,8 @@ function toTrail(el: RawElement, point: LatLng): Trail | null {
       : null,
     website: t.website ?? null,
     operator: t.operator ?? null,
+    ref: t.ref ?? null,
+    symbol: t.symbol ?? null,
     paths,
   };
 }

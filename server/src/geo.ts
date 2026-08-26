@@ -1,43 +1,6 @@
-/**
- * Geo math for trail distances.
- * Mean Earth radius + spherical haversine — accurate to ~0.5% at hiking scale,
- * plenty for sorting and display.
- */
-const EARTH_RADIUS_M = 6371008.8;
-const RAD = Math.PI / 180;
+import { haversineM, isClosedLoop, minDistanceM, polylineLengthM } from "../../shared/geo.ts";
 
-interface LL {
-  lat: number;
-  lon: number;
-}
-
-export function haversineM(aLat: number, aLon: number, bLat: number, bLon: number): number {
-  const dLat = (bLat - aLat) * RAD;
-  const dLon = (bLon - aLon) * RAD;
-  const s =
-    Math.sin(dLat / 2) ** 2 + Math.cos(aLat * RAD) * Math.cos(bLat * RAD) * Math.sin(dLon / 2) ** 2;
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(s));
-}
-
-export function polylineLengthM(path: ReadonlyArray<LL>): number {
-  let total = 0;
-  for (let i = 1; i < path.length; i++) {
-    total += haversineM(path[i - 1]!.lat, path[i - 1]!.lon, path[i]!.lat, path[i]!.lon);
-  }
-  return total;
-}
-
-/** Closest approach of any trail vertex to the search point. */
-export function minDistanceM(point: LL, paths: ReadonlyArray<ReadonlyArray<LL>>): number {
-  let min = Infinity;
-  for (const path of paths) {
-    for (const p of path) {
-      const d = haversineM(point.lat, point.lon, p.lat, p.lon);
-      if (d < min) min = d;
-    }
-  }
-  return min;
-}
+export { haversineM, minDistanceM, polylineLengthM };
 
 // --- self-check: npm run geo-check ---
 if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1]!).href) {
@@ -74,4 +37,25 @@ if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1]
     [{ lat: 0.5, lon: 0.51 }],
   ]);
   assert(near < 10_000, `min distance across paths ≈ ${(near / 1000).toFixed(1)} km`);
+
+  // Loop detection: closed ring vs open path
+  assert(
+    isClosedLoop([
+      [
+        { lat: 0, lon: 0 },
+        { lat: 0.001, lon: 0 },
+        { lat: 0, lon: 0 },
+      ],
+    ]),
+    "closed ring detected as loop",
+  );
+  assert(
+    !isClosedLoop([
+      [
+        { lat: 0, lon: 0 },
+        { lat: 0.05, lon: 0 },
+      ],
+    ]),
+    "open path not a loop",
+  );
 }

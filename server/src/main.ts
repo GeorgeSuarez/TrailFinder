@@ -34,7 +34,6 @@ const ApiLive = HttpApiBuilder.api(Api).pipe(
 
 const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../client/dist");
 
-// ponytail: no SPA history fallback — single-route app; add index.html fallback for deep links
 const serveStatic = (app: HttpApp.Default): HttpApp.Default<never, HttpPlatform> =>
   Effect.gen(function* () {
     const req = yield* HttpServerRequest.HttpServerRequest;
@@ -45,7 +44,13 @@ const serveStatic = (app: HttpApp.Default): HttpApp.Default<never, HttpPlatform>
     const filePath = path.resolve(distDir, rel);
     if (!filePath.startsWith(distDir + path.sep)) return yield* app;
 
-    return yield* HttpServerResponse.file(filePath).pipe(Effect.catchAll(() => app));
+    // missing asset (has an extension) -> API's 404; extension-less path -> SPA deep link
+    if (rel.includes(".")) {
+      return yield* HttpServerResponse.file(filePath).pipe(Effect.catchAll(() => app));
+    }
+    return yield* HttpServerResponse.file(path.join(distDir, "index.html")).pipe(
+      Effect.catchAll(() => app),
+    );
   });
 
 const port = Number(process.env.PORT ?? 3000);

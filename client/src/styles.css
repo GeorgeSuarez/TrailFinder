@@ -121,3 +121,81 @@ button:hover {
   flex: 1;
   height: 100%;
 }
+
+.places {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.place {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.place .goto {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place .remove,
+.star {
+  padding: 2px 8px;
+  border: none;
+  background: none;
+  color: #555;
+}
+
+.star {
+  margin-left: 6px;
+  color: #d97706;
+}
+
+.star:hover {
+  background: none;
+  color: #b45309;
+}
+
+.filters input {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail {
+  padding: 10px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #e2e2e2;
+  color: #555;
+}
+
+.detail-actions a {
+  align-self: center;
+}

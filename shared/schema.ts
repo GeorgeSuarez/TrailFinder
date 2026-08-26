@@ -19,6 +19,10 @@ export const Trail = Schema.Struct({
   network: Schema.NullOr(Schema.Literal("lwn", "rwn", "nwn", "iwn")),
   website: Schema.NullOr(Schema.String),
   operator: Schema.NullOr(Schema.String),
+  /** short route code from OSM `ref` (e.g. "44", "Via Alpina") */
+  ref: Schema.NullOr(Schema.String),
+  /** waymarking description from OSM `symbol` */
+  symbol: Schema.NullOr(Schema.String),
   /** one polyline per member way, drawn as-is (unmerged) */
   paths: Schema.Array(Schema.Array(LatLng)),
 });
