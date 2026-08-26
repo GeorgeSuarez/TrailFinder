@@ -1,0 +1,123 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+.app {
+  display: flex;
+  height: 100%;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+}
+
+aside {
+  width: 400px;
+  flex-shrink: 0;
+  padding: 14px;
+  overflow-y: auto;
+  border-right: 1px solid #ddd;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+h1 {
+  font-size: 20px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+}
+
+input {
+  flex: 1;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  background: #f0f0f0;
+}
+
+.matches {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint,
+.count {
+  color: #555;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.list li {
+  padding: 8px 10px;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.list li.selected {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px #fecaca;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.meta {
+  color: #555;
+}
+
+.map {
+  flex: 1;
+  height: 100%;
+}
