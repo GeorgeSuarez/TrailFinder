@@ -10,7 +10,7 @@ length, ascent, and route scope.
 ## How it works
 
 1. **Resolve a location** — type a place name (geocoded via Nominatim, with disambiguation
-   when multiple matches), hit 📍 *Use my location*, or click anywhere on the map.
+   when multiple matches), hit 📍 _Use my location_, or click anywhere on the map.
 2. **Query Overpass** — one query fetches every OSM hiking route around that point:
    `[out:json][timeout:25];rel[route=hiking](around:RADIUS,LAT,LON);out geom;`
 3. **Serve + display** — the Effect backend decodes the response into a typed `Trail` list
@@ -20,12 +20,12 @@ length, ascent, and route scope.
 
 ## Stack
 
-| Layer    | Tech                                                              |
-| -------- | ----------------------------------------------------------------- |
-| API      | [Effect TS](https://effect.website) — `HttpApi`, `Schema`, `HttpClient` with timeout + exponential retry |
-| Data     | [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) (trails) + [Nominatim](https://nominatim.org) (geocoding) — free, no API keys |
-| Client   | Vite · React 19 · react-leaflet / Leaflet                          |
-| Tooling  | TypeScript (tsc), oxlint, oxfmt, tsx                               |
+| Layer   | Tech                                                                                                                                           |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| API     | [Effect TS](https://effect.website) — `HttpApi`, `Schema`, `HttpClient` with timeout + exponential retry                                       |
+| Data    | [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) (trails) + [Nominatim](https://nominatim.org) (geocoding) — free, no API keys |
+| Client  | Vite · React 19 · react-leaflet / Leaflet                                                                                                      |
+| Tooling | TypeScript (tsc), oxlint, oxfmt, tsx                                                                                                           |
 
 ## Getting started
 
@@ -42,10 +42,10 @@ npm run build && npm start
 
 ## API
 
-| Endpoint       | Params                                     | Notes                                                        |
-| -------------- | ------------------------------------------ | ------------------------------------------------------------ |
-| `GET /api/geocode` | `q` (min 2 chars)                      | Top-5 Nominatim matches as `{ label, lat, lon }`             |
-| `GET /api/trails`  | `lat`, `lon`, `radius` (500–50000 m)   | Hiking routes sorted by distance; invalid params → 400       |
+| Endpoint           | Params                               | Notes                                                  |
+| ------------------ | ------------------------------------ | ------------------------------------------------------ |
+| `GET /api/geocode` | `q` (min 2 chars)                    | Top-5 Nominatim matches as `{ label, lat, lon }`       |
+| `GET /api/trails`  | `lat`, `lon`, `radius` (500–50000 m) | Hiking routes sorted by distance; invalid params → 400 |
 
 Errors are typed and tagged: `OverpassUnavailable` (503) and `GeocodeFailed` (502) surface
 after retries are exhausted; request validation failures return 400 with per-field messages.
@@ -70,13 +70,13 @@ client/src/
 
 ## Scripts
 
-| Script                  | Purpose                                  |
-| ----------------------- | ---------------------------------------- |
-| `dev:server` / `dev:client` | Run API / frontend in watch mode     |
-| `build`                 | Typecheck + build client to `client/dist` |
-| `start`                 | Serve API + built client on one port     |
-| `lint` / `format`       | oxlint / oxfmt                           |
-| `geo-check`             | Runnable asserts for the geo math        |
+| Script                      | Purpose                                   |
+| --------------------------- | ----------------------------------------- |
+| `dev:server` / `dev:client` | Run API / frontend in watch mode          |
+| `build`                     | Typecheck + build client to `client/dist` |
+| `start`                     | Serve API + built client on one port      |
+| `lint` / `format`           | oxlint / oxfmt                            |
+| `geo-check`                 | Runnable asserts for the geo math         |
 
 ## Notes & limits
 

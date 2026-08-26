@@ -126,7 +126,7 @@ HttpApi + Schema on the server; `react-leaflet` for the map; no other custom inf
 - [x] `curl 'localhost:3000/api/trails?lat=46.02&lon=7.75&radius=10000'` returns trails with
       non-empty `paths` (146 trails, sorted ascending, `lengthM > 0`, tags populated).
 - [x] Error path: `radius=99999999` → 400 with per-field message; lat=123 → 400; short q → 400.
-      Retry wraps transport errors *and* non-200 statuses (verified via the 406 episode).
+      Retry wraps transport errors _and_ non-200 statuses (verified via the 406 episode).
 - [x] Browser E2E (agent-browser against the prod server on :3999): search "Interlaken" →
       5-way disambiguation → 439 trails listed + drawn; list click highlights trail red on map
       and zooms to it; map clicks move the pin and refetch; radius change refetches.
