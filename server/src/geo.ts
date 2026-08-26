@@ -3,7 +3,7 @@ import { haversineM, isClosedLoop, minDistanceM, polylineLengthM } from "../../s
 export { haversineM, minDistanceM, polylineLengthM };
 
 // --- self-check: npm run geo-check ---
-if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1]!).href) {
+if (import.meta.url === (await import("node:url")).pathToFileURL(process.argv[1] ?? "").href) {
   const assert = (cond: boolean, msg: string) => {
     if (!cond) {
       console.error(`FAIL: ${msg}`);

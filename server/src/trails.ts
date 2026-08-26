@@ -4,7 +4,16 @@ import type { LatLng, Trail } from "../../shared/schema.ts";
 import { OverpassUnavailable } from "./errors.ts";
 import { minDistanceM, polylineLengthM } from "./geo.ts";
 
-const ENDPOINT = "https://overpass-api.de/api/interpreter";
+// Public Overpass mirrors, tried in order. overpass-api.de returns 521 when
+// its origin is down/overloaded; falling through to the free mirrors keeps
+// search working during those outages.
+const ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.tech-nakamura.jp/api/interpreter",
+  "https://overpass.osm.jp/api/interpreter",
+] as const;
 
 export const buildQuery = (lat: number, lon: number, radiusM: number): string =>
   `[out:json][timeout:25];rel[route=hiking](around:${radiusM},${lat},${lon});out geom;`;
@@ -58,9 +67,30 @@ function toTrail(el: RawElement, point: LatLng): Trail | null {
   };
 }
 
+const queryOne = (client: HttpClient.HttpClient, endpoint: string, body: string) =>
+  client
+    .execute(
+      HttpClientRequest.post(endpoint).pipe(
+        HttpClientRequest.bodyText(body),
+        HttpClientRequest.setHeader("content-type", "text/plain"),
+        // Overpass's fronting Apache 406s undici's default "node" user-agent
+        HttpClientRequest.setHeader("user-agent", "TrailFinder/0.1 (effect-ts hiking search)"),
+      ),
+    )
+    .pipe(
+      Effect.timeout(Duration.seconds(20)),
+      Effect.mapError(() => new OverpassUnavailable({ message: `Overpass ${endpoint} unreachable` })),
+      Effect.filterOrFail(
+        (res) => res.status === 200,
+        (res) => new OverpassUnavailable({ message: `Overpass ${endpoint} responded ${res.status}` }),
+      ),
+      Effect.retry({ times: 2, schedule: Schedule.exponential(Duration.millis(300)) }),
+    );
+
 /**
- * Fetch hiking-route relations around a point. Any transport/parse failure is
- * absorbed into `OverpassUnavailable` so handlers stay one-liners.
+ * Fetch hiking-route relations around a point. Tries each public mirror in
+ * order; any transport/parse failure is absorbed into `OverpassUnavailable`
+ * so handlers stay one-liners.
  */
 export const fetchTrails = (
   point: LatLng,
@@ -68,21 +98,8 @@ export const fetchTrails = (
 ): Effect.Effect<Trail[], OverpassUnavailable, HttpClient.HttpClient> =>
   Effect.gen(function* () {
     const client = yield* HttpClient.HttpClient;
-    const request = HttpClientRequest.post(ENDPOINT).pipe(
-      HttpClientRequest.bodyText(buildQuery(point.lat, point.lon, radiusM)),
-      HttpClientRequest.setHeader("content-type", "text/plain"),
-      // Overpass's fronting Apache 406s undici's default "node" user-agent
-      HttpClientRequest.setHeader("user-agent", "TrailFinder/0.1 (effect-ts hiking search)"),
-    );
-    // ponytail: single endpoint; add kumi.systems mirror fallback if 429s bite
-    const response = yield* client.execute(request).pipe(
-      Effect.timeout(Duration.seconds(20)),
-      Effect.filterOrFail(
-        (res) => res.status === 200,
-        (res) => new OverpassUnavailable({ message: `Overpass responded ${res.status}` }),
-      ),
-      Effect.retry({ times: 3, schedule: Schedule.exponential(Duration.seconds(0.5)) }),
-    );
+    const body = buildQuery(point.lat, point.lon, radiusM);
+    const response = yield* Effect.firstSuccessOf(ENDPOINTS.map((ep) => queryOne(client, ep, body)));
     const raw = yield* response.json.pipe(
       Effect.flatMap((json) => Schema.decodeUnknown(RawResponse)(json)),
       Effect.mapError(
@@ -95,10 +112,4 @@ export const fetchTrails = (
       .filter((t): t is Trail => t !== null)
       .sort((a, b) => a.pointDistanceM - b.pointDistanceM);
     return trails;
-  }).pipe(
-    Effect.catchAll((err) =>
-      err instanceof OverpassUnavailable
-        ? Effect.fail(err)
-        : Effect.fail(new OverpassUnavailable({ message: `${err._tag} talking to Overpass` })),
-    ),
-  );
+  });

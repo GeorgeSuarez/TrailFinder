@@ -11,24 +11,7 @@ import { Effect, Layer } from "effect";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Api } from "./api.ts";
-import { geocode } from "./geocode.ts";
-import { fetchTrails } from "./trails.ts";
-
-const SearchLive = HttpApiBuilder.group(Api, "search", (handlers) =>
-  handlers
-    .handle("geocode", ({ urlParams }) => geocode(urlParams.q.trim()))
-    .handle("trails", ({ urlParams }) =>
-      fetchTrails({ lat: urlParams.lat, lon: urlParams.lon }, urlParams.radius).pipe(
-        Effect.map((trails) => ({ trails })),
-      ),
-    ),
-);
-
-const ApiLive = HttpApiBuilder.api(Api).pipe(
-  Layer.provide(SearchLive),
-  Layer.provide(NodeHttpClient.layerUndici),
-);
+import { ApiLive } from "./app.ts";
 
 // --- static file serving for the built client (production single-process mode) ---
 
@@ -56,7 +39,7 @@ const serveStatic = (app: HttpApp.Default): HttpApp.Default<never, HttpPlatform>
 const port = Number(process.env.PORT ?? 3000);
 
 const ServerLive = HttpApiBuilder.serve(serveStatic).pipe(
-  Layer.provide(ApiLive),
+  Layer.provide(Layer.provide(ApiLive, NodeHttpClient.layerUndici)),
   HttpServer.withLogAddress,
   Layer.provide(NodeHttpServer.layer(createServer, { port })),
   Layer.launch,

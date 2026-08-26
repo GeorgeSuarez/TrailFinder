@@ -8,6 +8,8 @@
     "dev:client": "vite",
     "build": "tsc --noEmit && vite build",
     "start": "tsx server/src/main.ts",
+    "dev:worker": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "lint": "oxlint .",
     "format": "oxfmt .",
     "geo-check": "tsx server/src/geo.ts"
@@ -31,6 +33,7 @@
     "oxlint": "^1.80.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "wrangler": "^4.126.0"
   }
 }
