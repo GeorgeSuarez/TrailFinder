@@ -67,7 +67,7 @@ export function TrailMap(props: {
       {(props.trails ?? []).map((t) => (
         <Polyline
           key={t.id}
-          positions={t.paths.map((seg) => seg.map((p) => [p.lat, p.lon]))}
+          positions={t.paths.map((seg) => seg.map((p): [number, number] => [p.lat, p.lon]))}
           pathOptions={{
             color: t.id === props.selectedId ? SELECTED : NORMAL,
             weight: t.id === props.selectedId ? 4 : 2,
