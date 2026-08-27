@@ -9,7 +9,7 @@ import {
 export type Point = { lat: number; lon: number };
 
 async function getJson<T>(url: string, schema: Schema.Schema<T>, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(url, { signal });
+  const res = await fetch(url, signal ? { signal } : {});
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const msg =

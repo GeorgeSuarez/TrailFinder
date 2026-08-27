@@ -1,8 +1,8 @@
 import { HttpClient, HttpClientRequest } from "@effect/platform";
 import { Duration, Effect, Schedule, Schema } from "effect";
+import { minDistanceM, polylineLengthM } from "../../shared/geo.ts";
 import type { LatLng, Trail } from "../../shared/schema.ts";
 import { OverpassUnavailable } from "./errors.ts";
-import { minDistanceM, polylineLengthM } from "./geo.ts";
 
 // Public Overpass mirrors, tried in order. overpass-api.de returns 521 when
 // its origin is down/overloaded; falling through to the free mirrors keeps
@@ -24,16 +24,26 @@ const Point = Schema.Struct({ lat: Schema.Number, lon: Schema.Number });
 
 const RawElement = Schema.Struct({
   id: Schema.Number,
-  tags: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.String })),
-  members: Schema.optional(
-    Schema.Array(Schema.Struct({ geometry: Schema.optional(Schema.Array(Point)) })),
+  tags: Schema.optionalWith(Schema.Record({ key: Schema.String, value: Schema.String }), {
+    exact: true,
+  }),
+  members: Schema.optionalWith(
+    Schema.Array(
+      Schema.Struct({ geometry: Schema.optionalWith(Schema.Array(Point), { exact: true }) }),
+    ),
+    { exact: true },
   ),
 });
 
 const RawResponse = Schema.Struct({ elements: Schema.Array(RawElement) });
 type RawElement = typeof RawElement.Type;
 
-const NETWORKS = ["iwn", "nwn", "rwn", "lwn"] as const;
+const NETWORKS = new Set<Trail["network"]>(["iwn", "nwn", "rwn", "lwn"]);
+
+function parseNetwork(v: string | undefined): Trail["network"] | null {
+  for (const n of NETWORKS) if (n === v) return n;
+  return null;
+}
 
 /** ponytail: ascent tag parsed leniently ("~"/"+250" forms); real elevation needs a DEM service */
 function parseAscent(v: string | undefined): number | null {
@@ -56,9 +66,7 @@ function toTrail(el: RawElement, point: LatLng): Trail | null {
     pointDistanceM: Math.round(minDistanceM(point, paths)),
     lengthM: Math.round(paths.reduce((sum, p) => sum + polylineLengthM(p), 0)),
     ascentM: parseAscent(t.ascent),
-    network: (NETWORKS as ReadonlyArray<string>).includes(t.network ?? "")
-      ? ((t.network ?? null) as Trail["network"])
-      : null,
+    network: parseNetwork(t.network),
     website: t.website ?? null,
     operator: t.operator ?? null,
     ref: t.ref ?? null,
@@ -79,10 +87,13 @@ const queryOne = (client: HttpClient.HttpClient, endpoint: string, body: string)
     )
     .pipe(
       Effect.timeout(Duration.seconds(20)),
-      Effect.mapError(() => new OverpassUnavailable({ message: `Overpass ${endpoint} unreachable` })),
+      Effect.mapError(
+        () => new OverpassUnavailable({ message: `Overpass ${endpoint} unreachable` }),
+      ),
       Effect.filterOrFail(
         (res) => res.status === 200,
-        (res) => new OverpassUnavailable({ message: `Overpass ${endpoint} responded ${res.status}` }),
+        (res) =>
+          new OverpassUnavailable({ message: `Overpass ${endpoint} responded ${res.status}` }),
       ),
       Effect.retry({ times: 2, schedule: Schedule.exponential(Duration.millis(300)) }),
     );
@@ -99,7 +110,9 @@ export const fetchTrails = (
   Effect.gen(function* () {
     const client = yield* HttpClient.HttpClient;
     const body = buildQuery(point.lat, point.lon, radiusM);
-    const response = yield* Effect.firstSuccessOf(ENDPOINTS.map((ep) => queryOne(client, ep, body)));
+    const response = yield* Effect.firstSuccessOf(
+      ENDPOINTS.map((ep) => queryOne(client, ep, body)),
+    );
     const raw = yield* response.json.pipe(
       Effect.flatMap((json) => Schema.decodeUnknown(RawResponse)(json)),
       Effect.mapError(

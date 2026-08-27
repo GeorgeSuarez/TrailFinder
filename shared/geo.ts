@@ -24,7 +24,11 @@ export function haversineM(aLat: number, aLon: number, bLat: number, bLon: numbe
 export function polylineLengthM(path: ReadonlyArray<LL>): number {
   let total = 0;
   for (let i = 1; i < path.length; i++) {
-    total += haversineM(path[i - 1]!.lat, path[i - 1]!.lon, path[i]!.lat, path[i]!.lon);
+    const prev = path[i - 1];
+    const next = path[i];
+    // unreachable: the loop bound guarantees both indices are in range
+    if (prev === undefined || next === undefined) break;
+    total += haversineM(prev.lat, prev.lon, next.lat, next.lon);
   }
   return total;
 }

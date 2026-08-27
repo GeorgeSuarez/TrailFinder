@@ -23,7 +23,13 @@ const serveStatic = (app: HttpApp.Default): HttpApp.Default<never, HttpPlatform>
     const url = req.url.split("?")[0] ?? "/";
     if (req.method !== "GET" || url.startsWith("/api")) return yield* app;
 
-    const rel = url === "/" ? "index.html" : decodeURIComponent(url).replace(/^\/+/, "");
+    let rel: string;
+    try {
+      rel = url === "/" ? "index.html" : decodeURIComponent(url).replace(/^\/+/, "");
+    } catch {
+      // malformed percent-encoding is a client error, not a server defect
+      return yield* app;
+    }
     const filePath = path.resolve(distDir, rel);
     if (!filePath.startsWith(distDir + path.sep)) return yield* app;
 

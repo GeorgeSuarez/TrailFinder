@@ -33,7 +33,7 @@ function CenterOn({ point }: { point: Point }) {
 function FitTrail({ trail }: { trail: Trail }) {
   const map = useMap();
   useEffect(() => {
-    const pts = trail.paths.flat().map((p) => [p.lat, p.lon] as [number, number]);
+    const pts = trail.paths.flat().map((p): [number, number] => [p.lat, p.lon]);
     if (pts.length > 1) map.fitBounds(L.latLngBounds(pts).pad(0.15));
   }, [trail.id]);
   return null;

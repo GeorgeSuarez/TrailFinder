@@ -19,9 +19,14 @@ function loadPlaces(key: string): Array<SavedPlace> {
       (p): p is SavedPlace =>
         typeof p === "object" &&
         p !== null &&
-        typeof (p as SavedPlace).label === "string" &&
-        Number.isFinite((p as SavedPlace).lat) &&
-        Number.isFinite((p as SavedPlace).lon),
+        "label" in p &&
+        typeof p.label === "string" &&
+        "lat" in p &&
+        typeof p.lat === "number" &&
+        Number.isFinite(p.lat) &&
+        "lon" in p &&
+        typeof p.lon === "number" &&
+        Number.isFinite(p.lon),
     );
   } catch {
     return [];

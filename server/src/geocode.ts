@@ -40,6 +40,6 @@ export const geocode = (
     Effect.catchAll((err) =>
       err instanceof GeocodeFailed
         ? Effect.fail(err)
-        : Effect.fail(new GeocodeFailed({ message: `${err._tag} talking to Nominatim` })),
+        : Effect.fail(new GeocodeFailed({ message: `Nominatim request failed (${err._tag})` })),
     ),
   );

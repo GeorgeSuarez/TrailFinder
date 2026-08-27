@@ -180,8 +180,8 @@ export function App() {
     setMatches(null);
     setQuery("");
     goTo({
-      label:
-        result.label.split(",")[0]! + result.label.slice(result.label.indexOf(",")).slice(0, 60),
+      // city name only; the full display_name is often 100+ chars for the recents list
+      label: (result.label.split(",")[0] ?? result.label).slice(0, 60),
       lat: result.lat,
       lon: result.lon,
     });
@@ -192,8 +192,10 @@ export function App() {
     try {
       const results = await geocode(q.trim());
       if (results.length === 0) setError(`No place found for “${q}”`);
-      else if (results.length === 1) pick(results[0]!);
-      else setMatches(results);
+      else if (results.length === 1) {
+        const only = results[0];
+        if (only !== undefined) pick(only);
+      } else setMatches(results);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -354,6 +356,7 @@ export function App() {
               />
               <select
                 value={scopeFilter}
+                // SAFETY: the select renders exactly the SCOPES options, so the change value is one of them
                 onChange={(e) => setScopeFilter(e.target.value as ScopeFilter)}
                 aria-label="Filter by scope"
               >
@@ -366,6 +369,7 @@ export function App() {
               </select>
               <select
                 value={sortBy}
+                // SAFETY: the select renders exactly the SortBy options, so the change value is one of them
                 onChange={(e) => setSortBy(e.target.value as SortBy)}
                 aria-label="Sort by"
               >
