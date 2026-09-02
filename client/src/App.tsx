@@ -30,6 +30,28 @@ const without = (places: SavedPlace[], place: SavedPlace) =>
 
 const km = (m: number) => (m / 1000).toFixed(m >= 10_000 ? 0 : 1);
 
+function getInitial(): {
+  point: Point | null;
+  label: string | null;
+  radiusKm: number;
+  selectedId: number | null;
+} {
+  if (typeof window === "undefined")
+    return { point: null, label: null, radiusKm: 10, selectedId: null };
+  const sp = new URLSearchParams(window.location.search);
+  const lat = Number.parseFloat(sp.get("lat") ?? "");
+  const lon = Number.parseFloat(sp.get("lon") ?? "");
+  const valid =
+    Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+  const point = valid ? { lat, lon } : null;
+  const label = valid ? "Shared location" : null;
+  const rkm = Number.parseFloat(sp.get("rkm") ?? "");
+  const radiusKm = rkm === 5 || rkm === 10 || rkm === 25 ? rkm : 10;
+  const tid = Number.parseInt(sp.get("trail") ?? "");
+  const selectedId = Number.isInteger(tid) && tid > 0 ? tid : null;
+  return { point, label, radiusKm, selectedId };
+}
+
 function TrailDetail({ trail, onClose }: { trail: Trail; onClose: () => void }) {
   return (
     <section className="detail" aria-label="Selected trail details">
@@ -91,36 +113,48 @@ function PlaceRow(props: { place: SavedPlace; onGo: () => void; onRemove?: () =>
 export function App() {
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<Array<GeocodeResult> | null>(null);
-  const [point, setPoint] = useState<Point | null>(null);
-  const [pointLabel, setPointLabel] = useState<string | null>(null);
-  const [radiusKm, setRadiusKm] = useState(10);
+  const _init = getInitial();
+  const [point, setPoint] = useState<Point | null>(_init.point);
+  const [pointLabel, setPointLabel] = useState<string | null>(_init.label);
+  const [radiusKm, setRadiusKm] = useState(_init.radiusKm);
   const [trails, setTrails] = useState<Array<Trail> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(_init.selectedId);
   const [filterText, setFilterText] = useState("");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("distance");
   const [favorites, setFavorites] = useState<Array<SavedPlace>>(() => loadPlaces(FAVORITES_KEY));
-  const [recents, setRecents] = useState<Array<SavedPlace>>(() => loadPlaces(RECENTS_KEY));
+  const [recents, setRecents] = useState<Array<SavedPlace>>(() => {
+    const base = loadPlaces(RECENTS_KEY);
+    if (!_init.point) return base;
+    const next = pushRecent(base, {
+      label: _init.label!,
+      lat: _init.point.lat,
+      lon: _init.point.lon,
+    });
+    savePlaces(RECENTS_KEY, next);
+    return next;
+  });
 
-  // restore state from a shared deep link (?lat&lon&rkm&trail) once on mount
-  useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const lat = Number.parseFloat(sp.get("lat") ?? "");
-    const lon = Number.parseFloat(sp.get("lon") ?? "");
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-    if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
-
-    const place: SavedPlace = { label: "Shared location", lat, lon };
-    setPoint({ lat, lon });
-    setPointLabel(place.label);
-    setRecents((rs) => pushRecent(rs, place));
-    const rkm = Number.parseFloat(sp.get("rkm") ?? "");
-    if (rkm === 5 || rkm === 10 || rkm === 25) setRadiusKm(rkm);
-    const trailId = Number.parseInt(sp.get("trail") ?? "");
-    if (Number.isInteger(trailId) && trailId > 0) setSelectedId(trailId);
-  }, []);
+  const setFavoritesPersist = (updater: SavedPlace[] | ((prev: SavedPlace[]) => SavedPlace[])) =>
+    setFavorites((prev) => {
+      const next =
+        typeof updater === "function"
+          ? (updater as (p: SavedPlace[]) => SavedPlace[])(prev)
+          : updater;
+      savePlaces(FAVORITES_KEY, next);
+      return next;
+    });
+  const setRecentsPersist = (updater: SavedPlace[] | ((prev: SavedPlace[]) => SavedPlace[])) =>
+    setRecents((prev) => {
+      const next =
+        typeof updater === "function"
+          ? (updater as (p: SavedPlace[]) => SavedPlace[])(prev)
+          : updater;
+      savePlaces(RECENTS_KEY, next);
+      return next;
+    });
 
   // keep the URL in sync so any view can be shared or bookmarked
   useEffect(() => {
@@ -134,9 +168,6 @@ export function App() {
     }
     window.history.replaceState(null, "", sp.size > 0 ? `/?${sp}` : "/");
   }, [point, radiusKm, selectedId, trails]);
-
-  useEffect(() => savePlaces(FAVORITES_KEY, favorites), [favorites]);
-  useEffect(() => savePlaces(RECENTS_KEY, recents), [recents]);
 
   // fetch trails whenever point/radius changes (selection survives refetches)
   useEffect(() => {
@@ -177,7 +208,7 @@ export function App() {
     setPoint({ lat: place.lat, lon: place.lon });
     setPointLabel(place.label);
     setSelectedId(null);
-    setRecents((rs) => pushRecent(rs, place));
+    setRecentsPersist((rs) => pushRecent(rs, place));
   }
 
   function pick(result: GeocodeResult) {
@@ -224,7 +255,7 @@ export function App() {
 
   function toggleFavorite() {
     if (!point || !currentKey) return;
-    setFavorites((fs) =>
+    setFavoritesPersist((fs) =>
       fs.some((f) => placeKey(f) === currentKey)
         ? fs.filter((f) => placeKey(f) !== currentKey)
         : [
@@ -288,7 +319,7 @@ export function App() {
                     key={placeKey(f)}
                     place={f}
                     onGo={() => goTo(f)}
-                    onRemove={() => setFavorites((fs) => without(fs, f))}
+                    onRemove={() => setFavoritesPersist((fs) => without(fs, f))}
                   />
                 ))}
               </>
@@ -301,7 +332,7 @@ export function App() {
                     key={placeKey(r)}
                     place={r}
                     onGo={() => goTo(r)}
-                    onRemove={() => setRecents((rs) => without(rs, r))}
+                    onRemove={() => setRecentsPersist((rs) => without(rs, r))}
                   />
                 ))}
               </>
