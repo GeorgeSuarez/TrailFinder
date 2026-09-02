@@ -23,7 +23,7 @@ async function getJson<T>(url: string, schema: Schema.Schema<T>, signal?: AbortS
 
 export async function geocode(q: string): Promise<Array<GeocodeResultT>> {
   const r = await getJson(`/api/geocode?q=${encodeURIComponent(q)}`, Schema.Array(GeocodeResult));
-  return [...r];
+  return r as Array<GeocodeResultT>;
 }
 
 export async function getTrails(
@@ -36,5 +36,5 @@ export async function getTrails(
     TrailsResponse,
     signal,
   );
-  return [...r.trails];
+  return r.trails as Array<Trail>;
 }

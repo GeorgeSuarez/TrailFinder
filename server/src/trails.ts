@@ -7,7 +7,7 @@ import { OverpassUnavailable } from "./errors.ts";
 // Public Overpass mirrors, tried in order. overpass-api.de returns 521 when
 // its origin is down/overloaded; falling through to the free mirrors keeps
 // search working during those outages.
-const ENDPOINTS = [
+export const ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
@@ -41,8 +41,7 @@ type RawElement = typeof RawElement.Type;
 const NETWORKS = new Set<Trail["network"]>(["iwn", "nwn", "rwn", "lwn"]);
 
 function parseNetwork(v: string | undefined): Trail["network"] | null {
-  for (const n of NETWORKS) if (n === v) return n;
-  return null;
+  return v != null && NETWORKS.has(v as Trail["network"]) ? (v as Trail["network"]) : null;
 }
 
 /** ponytail: ascent tag parsed leniently ("~"/"+250" forms); real elevation needs a DEM service */

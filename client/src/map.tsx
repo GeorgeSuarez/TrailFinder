@@ -14,28 +14,25 @@ import type { Point } from "./api";
 const SELECTED = "#dc2626";
 const NORMAL = "#2563eb";
 
-function ClickCatcher({ onPick }: { onPick: (p: Point) => void }) {
-  useMapEvents({
-    click: (e) => onPick({ lat: e.latlng.lat, lon: e.latlng.lng }),
-  });
-  return null;
-}
-
-function CenterOn({ point }: { point: Point }) {
+function MapEffects({
+  point,
+  selected,
+  onPick,
+}: {
+  point: Point | null;
+  selected: Trail | undefined;
+  onPick: (p: Point) => void;
+}) {
   const map = useMap();
+  useMapEvents({ click: (e) => onPick({ lat: e.latlng.lat, lon: e.latlng.lng }) });
   useEffect(() => {
-    map.setView([point.lat, point.lon], Math.max(map.getZoom(), 11));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- oxlint
-  }, [point.lat, point.lon]);
-  return null;
-}
-
-function FitTrail({ trail }: { trail: Trail }) {
-  const map = useMap();
+    if (point) map.setView([point.lat, point.lon], Math.max(map.getZoom(), 11));
+  }, [point?.lat, point?.lon]); // oxlint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const pts = trail.paths.flat().map((p): [number, number] => [p.lat, p.lon]);
+    if (!selected) return;
+    const pts = selected.paths.flat().map((p): [number, number] => [p.lat, p.lon]);
     if (pts.length > 1) map.fitBounds(L.latLngBounds(pts).pad(0.15));
-  }, [trail.id]);
+  }, [selected?.id]); // oxlint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
@@ -53,16 +50,13 @@ export function TrailMap(props: {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <ClickCatcher onPick={props.onPick} />
+      <MapEffects point={props.point} selected={selected} onPick={props.onPick} />
       {props.point && (
-        <>
-          <CenterOn point={props.point} />
-          <CircleMarker
-            center={[props.point.lat, props.point.lon]}
-            radius={8}
-            pathOptions={{ color: "#fff", fillColor: SELECTED, fillOpacity: 1, weight: 2 }}
-          />
-        </>
+        <CircleMarker
+          center={[props.point.lat, props.point.lon]}
+          radius={8}
+          pathOptions={{ color: "#fff", fillColor: SELECTED, fillOpacity: 1, weight: 2 }}
+        />
       )}
       {(props.trails ?? []).map((t) => (
         <Polyline
@@ -76,7 +70,6 @@ export function TrailMap(props: {
           eventHandlers={{ click: () => props.onSelect(t.id) }}
         />
       ))}
-      {selected && <FitTrail trail={selected} />}
     </MapContainer>
   );
 }

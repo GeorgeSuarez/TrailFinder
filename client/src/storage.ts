@@ -4,14 +4,14 @@ export interface SavedPlace {
   lon: number;
 }
 
-const FAVORITES_KEY = "trailfinder.favorites";
-const RECENTS_KEY = "trailfinder.recents";
+export const FAVORITES_KEY = "trailfinder.favorites";
+export const RECENTS_KEY = "trailfinder.recents";
 const RECENTS_CAP = 6;
 
 export const placeKey = (p: { lat: number; lon: number }) =>
   `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
 
-function loadPlaces(key: string): Array<SavedPlace> {
+export function loadPlaces(key: string): Array<SavedPlace> {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(key) ?? "[]");
     if (!Array.isArray(raw)) return [];
@@ -33,18 +33,13 @@ function loadPlaces(key: string): Array<SavedPlace> {
   }
 }
 
-function savePlaces(key: string, places: Array<SavedPlace>): void {
+export function savePlaces(key: string, places: Array<SavedPlace>): void {
   try {
     localStorage.setItem(key, JSON.stringify(places));
   } catch {
     // storage full/blocked — persistence is best-effort
   }
 }
-
-export const loadFavorites = (): Array<SavedPlace> => loadPlaces(FAVORITES_KEY);
-export const saveFavorites = (places: Array<SavedPlace>): void => savePlaces(FAVORITES_KEY, places);
-export const loadRecents = (): Array<SavedPlace> => loadPlaces(RECENTS_KEY);
-export const saveRecents = (places: Array<SavedPlace>): void => savePlaces(RECENTS_KEY, places);
 
 export function pushRecent(
   recents: ReadonlyArray<SavedPlace>,

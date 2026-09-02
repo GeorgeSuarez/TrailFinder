@@ -20,16 +20,15 @@ const distDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.
 const serveStatic = (app: HttpApp.Default): HttpApp.Default<never, HttpPlatform> =>
   Effect.gen(function* () {
     const req = yield* HttpServerRequest.HttpServerRequest;
-    const url = req.url.split("?")[0] ?? "/";
-    if (req.method !== "GET" || url.startsWith("/api")) return yield* app;
+    if (req.method !== "GET" || req.url.startsWith("/api")) return yield* app;
 
-    let rel: string;
+    let pathname: string;
     try {
-      rel = url === "/" ? "index.html" : decodeURIComponent(url).replace(/^\/+/, "");
+      pathname = new URL(req.url, "http://localhost").pathname;
     } catch {
-      // malformed percent-encoding is a client error, not a server defect
       return yield* app;
     }
+    const rel = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
     const filePath = path.resolve(distDir, rel);
     if (!filePath.startsWith(distDir + path.sep)) return yield* app;
 

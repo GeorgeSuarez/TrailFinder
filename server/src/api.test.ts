@@ -5,18 +5,13 @@ import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
 import { GeocodeResult, TrailsResponse } from "../../shared/schema.ts";
 import { ApiLive } from "./app.ts";
+import { ENDPOINTS } from "./trails.ts";
 
 // Faithful fakes of the third-party APIs, served over a real HTTP stack:
 // the same undici HttpClient the Node server uses, pointed at a MockAgent.
 // Keeps the public /api entrypoints testable without touching the network.
 
-const OVERPASS_HOSTS = [
-  "https://overpass-api.de",
-  "https://overpass.kumi.systems",
-  "https://overpass.private.coffee",
-  "https://overpass.tech-nakamura.jp",
-  "https://overpass.osm.jp",
-] as const;
+const OVERPASS_HOSTS = ENDPOINTS.map((u) => new URL(u).origin) as readonly string[];
 
 const overpassBody = JSON.stringify({
   elements: [
@@ -102,7 +97,7 @@ const handler = (agent: MockAgent) =>
 describe("GET /api/trails", () => {
   it("decodes, computes and sorts trails; drops relations without geometry", async () => {
     const agent = newAgent();
-    mockJson(agent, OVERPASS_HOSTS[0], "POST", "/api/interpreter", 200, overpassBody);
+    mockJson(agent, OVERPASS_HOSTS[0]!, "POST", "/api/interpreter", 200, overpassBody);
 
     const res = await handler(agent)(
       new Request("http://test/api/trails?lat=47&lon=8&radius=10000"),
@@ -130,8 +125,8 @@ describe("GET /api/trails", () => {
 
   it("falls back to the next mirror when the first returns 521", async () => {
     const agent = newAgent();
-    mockJson(agent, OVERPASS_HOSTS[0], "POST", "/api/interpreter", 521, "Service Unavailable");
-    mockJson(agent, OVERPASS_HOSTS[1], "POST", "/api/interpreter", 200, overpassBody);
+    mockJson(agent, OVERPASS_HOSTS[0]!, "POST", "/api/interpreter", 521, "Service Unavailable");
+    mockJson(agent, OVERPASS_HOSTS[1]!, "POST", "/api/interpreter", 200, overpassBody);
 
     const res = await handler(agent)(
       new Request("http://test/api/trails?lat=47&lon=8&radius=10000"),

@@ -4,25 +4,29 @@ import type { GeocodeResult, Trail } from "../../shared/schema.ts";
 import { geocode, getTrails, type Point } from "./api";
 import { downloadGpx } from "./gpx";
 import {
-  loadFavorites,
-  loadRecents,
+  FAVORITES_KEY,
+  RECENTS_KEY,
+  loadPlaces,
   placeKey,
   pushRecent,
-  saveFavorites,
-  saveRecents,
+  savePlaces,
   type SavedPlace,
 } from "./storage";
 import { TrailMap } from "./map";
 
-const SCOPE: Record<string, string> = {
+const SCOPE = {
   lwn: "local",
   rwn: "regional",
   nwn: "national",
   iwn: "international",
-};
-const SCOPES = ["lwn", "rwn", "nwn", "iwn"] as const;
-type ScopeFilter = "all" | (typeof SCOPES)[number];
+} as const;
+type Scope = keyof typeof SCOPE;
+const SCOPES = Object.keys(SCOPE) as Scope[];
+type ScopeFilter = "all" | Scope;
 type SortBy = "distance" | "length" | "ascent";
+
+const without = (places: SavedPlace[], place: SavedPlace) =>
+  places.filter((p) => placeKey(p) !== placeKey(place));
 
 const km = (m: number) => (m / 1000).toFixed(m >= 10_000 ? 0 : 1);
 
@@ -39,7 +43,7 @@ function TrailDetail({ trail, onClose }: { trail: Trail; onClose: () => void }) 
         <span className="chip">{isClosedLoop(trail.paths) ? "loop" : "out & back"}</span>
         {trail.ref && <span className="chip">{trail.ref}</span>}
         {trail.symbol && <span className="chip">{trail.symbol}</span>}
-        {trail.network && <span className="chip">{SCOPE[trail.network]}</span>}
+        {trail.network && <span className="chip">{SCOPE[trail.network as Scope]}</span>}
       </div>
       <p className="meta">
         {km(trail.lengthM)} km · {km(trail.pointDistanceM)} km away
@@ -97,8 +101,8 @@ export function App() {
   const [filterText, setFilterText] = useState("");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("distance");
-  const [favorites, setFavorites] = useState<Array<SavedPlace>>(loadFavorites);
-  const [recents, setRecents] = useState<Array<SavedPlace>>(loadRecents);
+  const [favorites, setFavorites] = useState<Array<SavedPlace>>(() => loadPlaces(FAVORITES_KEY));
+  const [recents, setRecents] = useState<Array<SavedPlace>>(() => loadPlaces(RECENTS_KEY));
 
   // restore state from a shared deep link (?lat&lon&rkm&trail) once on mount
   useEffect(() => {
@@ -131,8 +135,8 @@ export function App() {
     window.history.replaceState(null, "", sp.size > 0 ? `/?${sp}` : "/");
   }, [point, radiusKm, selectedId, trails]);
 
-  useEffect(() => saveFavorites(favorites), [favorites]);
-  useEffect(() => saveRecents(recents), [recents]);
+  useEffect(() => savePlaces(FAVORITES_KEY, favorites), [favorites]);
+  useEffect(() => savePlaces(RECENTS_KEY, recents), [recents]);
 
   // fetch trails whenever point/radius changes (selection survives refetches)
   useEffect(() => {
@@ -284,9 +288,7 @@ export function App() {
                     key={placeKey(f)}
                     place={f}
                     onGo={() => goTo(f)}
-                    onRemove={() =>
-                      setFavorites((fs) => fs.filter((x) => placeKey(x) !== placeKey(f)))
-                    }
+                    onRemove={() => setFavorites((fs) => without(fs, f))}
                   />
                 ))}
               </>
@@ -299,9 +301,7 @@ export function App() {
                     key={placeKey(r)}
                     place={r}
                     onGo={() => goTo(r)}
-                    onRemove={() =>
-                      setRecents((rs) => rs.filter((x) => placeKey(x) !== placeKey(r)))
-                    }
+                    onRemove={() => setRecents((rs) => without(rs, r))}
                   />
                 ))}
               </>
@@ -402,7 +402,7 @@ export function App() {
                       <span className="meta">
                         {km(t.pointDistanceM)} km away · {km(t.lengthM)} km long
                         {t.ascentM != null ? ` · ↗ ${Math.round(t.ascentM)} m` : ""}
-                        {t.network ? ` · ${SCOPE[t.network]}` : ""}
+                        {t.network ? ` · ${SCOPE[t.network as Scope]}` : ""}
                       </span>
                       {t.website && (
                         <a
